@@ -1,6 +1,8 @@
-# Code standards for the 2030 Next.js app
 
-Each developer that contributes code to the 2030 calculator repo is expected to follow these code standards. This document is the single source of truth on how we write code as a team.
+
+# Code standards - Vacuumlabs Typescript code
+
+Each developer that contributes code is expected to follow these code standards. This document is the single source of truth on how we write code as a team.
 
 During reviews of pull requests, the reviewer should use this document as a base on how the code should be written.
 
@@ -21,7 +23,6 @@ For values that are supposed to be immutable constants, use UPPERCASE_SNAKE_CASE
 ```javascript
 // DO 👍
 const MAX_LENGTH = 123;
-
 // DON'T
 const maxLength = 123;
 ```
@@ -46,7 +47,6 @@ Booleans should always be prefixed with a verb such as is or has. It makes it ea
 const [isOn, setIsOn] = useState(false);
 const hasDetailedFields = true;
 const displayMenu = false;
-
 // DON'T
 const [on, setOn] = useState(false);
 const detailedFields = true;
@@ -60,7 +60,6 @@ React Components are written using PascalCase.
 ```javascript
 // DO 👍
 const MeaningOfItAll = ({ life }) => 42;
-
 // DON'T
 const thisIsWrong = ({ num }) => num;
 ```
@@ -72,7 +71,6 @@ Only use arrow functions and name them using camelCase.
 ```javascript
 // DO 👍
 const calculateSum = (a: number, b: number) => a + b;
-
 // DON'T
 const CalculateSum = (a: number, b: number) => a + b;
 const calculatesum = (a: number, b: number) => a + b;
@@ -88,7 +86,6 @@ All types should end with the word `Type` if general, and `Props` in regards to 
 type ListItemType = {
   name: string,
 };
-
 // DON'T
 type ListItem = {
   name: string,
@@ -102,7 +99,6 @@ type ListItem = {
 ```javascript
 // DO 👍
 const color = defaultColor ? 'blue' : 'red';
-
 // DON'T
 const color = defaultColor ? 'blue' : prefersLightTones ? 'light-blue' : 'red';
 ```
@@ -143,7 +139,6 @@ For files that are React components, or tests for React components, use PascalCa
 // DO 👍
 /calculation
  - IncrementButton.tsx
-
 // DON'T
 /calculation
  - incrementButton.tsx
@@ -179,7 +174,6 @@ const ChooseYourFavoriteChocolate = ({ defaultSelectedChocolate: ChocolateType, 
 Interactive components / elements should have a unique property called `data-testid` specified on them. This goes for buttons, links and inputs such as selects. If you're not sure if you should add it, add it. The principle is as follows:
 
 > If your element is the wrapping interactive element, it should have a `data-testid` specified.
-
 `a`, `button` and `select` are all wrapping interactive elements, where an `option` is not (a test will be able to target this by accessing the select).
 
 ```html
@@ -189,11 +183,11 @@ Interactive components / elements should have a unique property called `data-tes
 ### Visual testing
 
 If you write visual components (dumb ui components) - you should create [Storybook](https://storybook.js.org) stories in the folder `__stories__` and named as `NameMatchingTheFileToBeTested.stories.ts`.
-Write one variant representing each of the different states your component can be in. This is used to communicate regarding the design in larger perspective - the Storybook is public to everyone at Doconomy. You can test your variants by running `yarn storybook` locally.
+Write one variant representing each of the different states your component can be in. This is used to communicate regarding the design in larger perspective - the Storybook is public to everyone at client's company. You can test your variants by running `yarn storybook` locally.
 
 ### Unit testing
 
-Always write unit tests! If you're used to doing TDD, please do, otherwise, write tests that cover the different use cases of your component. Please get in touch with teammates in the shared Slack channel #2030-dev-discussion if you feel lost. We use `jest` and [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) to test.
+Always write unit tests! If you're used to doing TDD, please do, otherwise, write tests that cover the different use cases of your component. Please get in touch with teammates in the shared Slack channel  if you feel lost. We use `jest` and [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) to test.
 
 Unit tests are placed in the root folder `__tests__` and named as `NameMatchingTheFileToBeTested.test.ts`.
 
@@ -215,7 +209,6 @@ const ChooseYourFavoriteChocolate = ({ defaultSelectedChocolate: ChocolateType, 
     /* code here */
   )
 }
-
 // DON'T
 const ChooseYourFavoriteChocolate = ({ defaultSelectedChocolate: ChocolateType, onChocolateClick: (chocolate: ChocolateType) => Promise<void> }) => {
   const [existingChocolates, setExistingChocolates] = useState([])
@@ -264,7 +257,6 @@ const chocolate: ChocolateType = {
   cocoaPercentage: 0.1,
   color: 'LightBrown'
 }
-
 // DON'T
 const chocolate: {
   name: string
