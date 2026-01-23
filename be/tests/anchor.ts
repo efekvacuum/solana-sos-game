@@ -1,7 +1,8 @@
 import {
   fetchSos,
   getInitializeInstruction,
-  getJoinInstruction
+  getJoinInstruction,
+  getPlayInstruction
 } from "../target/idl/index.ts";
 
 import {
@@ -9,6 +10,7 @@ import {
   assertIsSendableTransaction,
   createTransactionMessage,
   generateKeyPairSigner,
+  Instruction,
   KeyPairSigner,
   lamports,
   pipe,
@@ -28,11 +30,32 @@ const logBoard = (board: any) => {
   });
 }
 
+let client: CustomClient;
+
+const sendTransactionHelper = async (instructions: Instruction[], feePayer: KeyPairSigner<string>) => {
+  const { value: latestBlockhash } = await
+    client.rpc.getLatestBlockhash().send();
+
+  const transactionMessage = await pipe(
+    createTransactionMessage({ version: 0 }),
+    (tx) => setTransactionMessageFeePayerSigner(feePayer, tx),
+    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+    (tx) => appendTransactionMessageInstructions(instructions, tx),
+    (tx) => client.estimateAndSetComputeUnitLimit(tx),
+  );
+
+  // Below complains with typescript I didn't dive in to see why so I marked it with any
+  const transaction = await signTransactionMessageWithSigners(transactionMessage as any);
+  assertIsSendableTransaction(transaction);
+
+  return await client.sendAndConfirmTransaction(transaction as any, { commitment: 'confirmed' });
+}
+
 describe("Test", () => {
   let sosKeypair: KeyPairSigner<string>;
   let player2Keypair: KeyPairSigner<string>;
   let player3Keypair: KeyPairSigner<string>;
-  let client: CustomClient;
+
 
   before(async () => {
     client = await newClient();
@@ -55,14 +78,6 @@ describe("Test", () => {
   });
 
   it("initialize", async () => {
-    // Prepare inputs.
-    const { value: latestBlockhash } = await
-      client.rpc.getLatestBlockhash().send();
-
-    /* const { stdout, stderr } = await execAsync('solana program deploy -u localhost target/deploy/hello_anchor.so');
-     const deployedProgram : any = stdout.split("Program Id: ")[1].substring(0, 65);
-     console.log("Deployed at: ",stdout);*/
-
     const initializeSosIx = getInitializeInstruction(
       {
         signer: client.wallet,
@@ -70,32 +85,13 @@ describe("Test", () => {
       }
     )
 
+    await sendTransactionHelper([initializeSosIx], client.wallet)
 
-    const transactionMessage = await pipe(
-        createTransactionMessage({ version: 0 }),
-        (tx) => setTransactionMessageFeePayerSigner(client.wallet, tx),
-        (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-        (tx) => appendTransactionMessageInstructions([initializeSosIx], tx),
-        (tx) => client.estimateAndSetComputeUnitLimit(tx),
-      );
-
-
-    // Compile the transaction message and sign it.
-    const transaction = await signTransactionMessageWithSigners(transactionMessage);
-    console.log("signeed")
-    assertIsSendableTransaction(transaction);
-
-    await client.sendAndConfirmTransaction(transaction, { commitment: 'confirmed' });
-
-    const accInfo = await client.rpc.getAccountInfo(sosKeypair.address).send();
-
-    console.log("accInfo:", accInfo)
+    const sosAccount = await fetchSos(client.rpc, sosKeypair.address);
+    assert.equal(sosAccount.data.p1, client.wallet.address);
   });
 
   it("p2 joins", async () => {
-    const { value: latestBlockhash } = await
-      client.rpc.getLatestBlockhash().send();
-
     const joinIx = getJoinInstruction(
       {
         signer: player2Keypair,
@@ -103,34 +99,16 @@ describe("Test", () => {
       }
     )
 
-    const transactionMessage = await pipe(
-        createTransactionMessage({ version: 0 }),
-        (tx) => setTransactionMessageFeePayerSigner(player2Keypair, tx),
-        (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-        (tx) => appendTransactionMessageInstructions([joinIx], tx),
-        (tx) => client.estimateAndSetComputeUnitLimit(tx),
-      );
-    
+    await sendTransactionHelper([joinIx], player2Keypair)
 
-
-    // Compile the transaction message and sign it.
-    const transaction = await signTransactionMessageWithSigners(transactionMessage);
-    assertIsSendableTransaction(transaction);
-
-    await client.sendAndConfirmTransaction(transaction, { commitment: 'confirmed' });
-
-    const accInfo = await client.rpc.getAccountInfo(sosKeypair.address).send();
     const sosAccount = await fetchSos(client.rpc, sosKeypair.address)
 
     assert.equal(sosAccount.data.p2, player2Keypair.address)
   });
 
-  
-  it("Fails if player tries to join while the 2 players are decided", async () => {
-    try{
-      const { value: latestBlockhash } = await
-        client.rpc.getLatestBlockhash().send();
 
+  it("Fails if player tries to join while the 2 players are decided", async () => {
+    try {
       const joinIx = getJoinInstruction(
         {
           signer: player3Keypair,
@@ -138,51 +116,35 @@ describe("Test", () => {
         }
       )
 
-      const transactionMessage = await pipe(
-          createTransactionMessage({ version: 0 }),
-          (tx) => setTransactionMessageFeePayerSigner(player3Keypair, tx),
-          (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-          (tx) => appendTransactionMessageInstructions([joinIx], tx),
-          (tx) => client.estimateAndSetComputeUnitLimit(tx),
-        );
-      
-
-
-      // Compile the transaction message and sign it.
-      const transaction = await signTransactionMessageWithSigners(transactionMessage);
-      assertIsSendableTransaction(transaction);
-
-      await client.sendAndConfirmTransaction(transaction, { commitment: 'confirmed' });
-    } catch(error: any) {
+      await sendTransactionHelper([joinIx], player3Keypair)
+    } catch (error: any) {
       assert.equal(error.cause.InstructionError[1].Custom, 2502n)
     }
   });
-  /*
+
   it("p1 plays", async () => {
-    let sosAccount = await program.account.sos.fetch(
-      sosKeypair.publicKey
-    );
- 
-    assert.equal(sosAccount.board[0], 0);
- 
-    const txHash = await program.methods
-      .play(0, 1)
-      .accounts({
-        sos: sosKeypair.publicKey,
-        signer: program.provider.publicKey,
-      })
-      .rpc();
- 
-    await program.provider.connection.confirmTransaction(txHash);
- 
-    sosAccount = await program.account.sos.fetch(
-      sosKeypair.publicKey
-    );
- 
-    assert.equal(sosAccount.board[0], 1);
+    let sosAccount = await fetchSos(client.rpc, sosKeypair.address)
+
+    assert.equal(sosAccount.data.board[0], 0);
+    const playIx = getPlayInstruction(
+      {
+        piece: 1,
+        position: 0,
+        sos: sosAccount.address,
+        signer: client.wallet
+      }
+    )
+    try {
+      await sendTransactionHelper([playIx], client.wallet);
+    } catch (err: any) {
+      console.log("simerr", err.cause)
+    }
+    sosAccount = await fetchSos(client.rpc, sosKeypair.address)
+
+    assert.equal(sosAccount.data.board[0], 1);
   });
- 
-  it("Fails if not their turn", async () => {
+
+  /*it("Fails if not their turn", async () => {
     try {
       const txHash = await program.methods
         .play(0, 1)
@@ -251,6 +213,6 @@ describe("Test", () => {
  
     assert.equal(sosAccount.p1Score, 1);
     assert.equal(sosAccount.p2Score, 0);
-  });
-  it("Fails if the person trying to access a board is not part of that game");*/
+  });*/
+  it("Fails if the person trying to access a board is not part of that game");
 });
