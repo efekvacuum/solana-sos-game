@@ -3,7 +3,7 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-hello_anchor = "BXuDm8bKg1o7TpSQ11pWoNAMVDNtT7vS9isphhaTfzr9"
+hello_anchor = "3JrVs4qisvju5p7qwY3wahS7MesuArN1cD7N7GYjfY6R"
 
 [registry]
 url = "https://api.apr.dev"
@@ -13,8 +13,8 @@ cluster = "Localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-client = "yarn run ts-node client/*.ts"
+test = "npx tsx tests/anchor.ts"
+client = "npx tsx client/*.ts"
 
 [toolchain]
-anchor_version = "0.29.0"
+anchor_version = "0.32.1"

@@ -1,0 +1,1 @@
+`anchor_idl_to_codama.ts` is used to take an idl that is generated from an anchor build and generate js functions that the new `@solana/kit` library accepts. `@solana/kit` library preceeded `@solana/web3.js`

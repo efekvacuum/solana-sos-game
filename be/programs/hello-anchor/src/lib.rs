@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
-use solana_program::system_program;
+use anchor_lang::system_program; 
 
 // This is your program's public key and it will update
 // automatically when you build the project.
-declare_id!("BXuDm8bKg1o7TpSQ11pWoNAMVDNtT7vS9isphhaTfzr9");
+declare_id!("3JrVs4qisvju5p7qwY3wahS7MesuArN1cD7N7GYjfY6R");
 
 fn calculate_score_gained(board: &[u8; 25], position: u8) -> u8 {
     let user_piece = board[position as usize];
@@ -152,3 +152,6 @@ pub struct Sos {
     p1Score: u8,
     p2Score: u8
 }
+
+//  8 + 
+//  32 + 32 + 25 + 1 + 1 + 1;
