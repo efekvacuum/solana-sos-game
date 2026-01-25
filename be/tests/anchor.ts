@@ -1,8 +1,11 @@
 import {
   fetchSos,
+  getHelloAnchorErrorMessage,
   getInitializeInstruction,
   getJoinInstruction,
-  getPlayInstruction
+  getPlayInstruction,
+  HELLO_ANCHOR_ERROR__NOT_YOUR_TURN,
+  HELLO_ANCHOR_ERROR__POSITION_NOT_EMPTY
 } from "../target/idl/index.ts";
 
 import {
@@ -130,89 +133,98 @@ describe("Test", () => {
       {
         piece: 1,
         position: 0,
-        sos: sosAccount.address,
+        sos: sosKeypair.address,
         signer: client.wallet
       }
     )
-    try {
-      await sendTransactionHelper([playIx], client.wallet);
-    } catch (err: any) {
-      console.log("simerr", err.cause)
-    }
+
+    await sendTransactionHelper([playIx], client.wallet);
+
     sosAccount = await fetchSos(client.rpc, sosKeypair.address)
 
     assert.equal(sosAccount.data.board[0], 1);
   });
 
-  /*it("Fails if not their turn", async () => {
+  it("Fails if not their turn", async () => {
     try {
-      const txHash = await program.methods
-        .play(0, 1)
-        .accounts({
-          sos: sosKeypair.publicKey,
-          signer: program.provider.publicKey,
-        })
-        .rpc();
- 
-      await program.provider.connection.confirmTransaction(txHash);
-    } catch (error) {
-      const errMsg = "Error Code: NotYourTurn.";
-      
-      assert(error.message.includes(errMsg))
+      const playIx = getPlayInstruction(
+        {
+          piece: 1,
+          position: 0,
+          sos: sosKeypair.address,
+          signer: client.wallet
+        }
+      )
+
+      await sendTransactionHelper([playIx], client.wallet);
+    } catch (error: any) {
+      assert.equal(HELLO_ANCHOR_ERROR__NOT_YOUR_TURN, parseInt(error.cause.InstructionError[1].Custom))
     }
   });
- 
+
   it("Fails if a player tries to put a piece to a non-empty position", async () => {
-    try {
-      const txHash = await program.methods
-        .play(0, 1)
-        .accounts({
-          sos: sosKeypair.publicKey,
-          signer: player2Keypair.publicKey,
-        })
-        .signers([player2Keypair])
-        .rpc();
- 
-      await program.provider.connection.confirmTransaction(txHash);
-    } catch (error) {
-      const errMsg = "Error Code: PositionNotEmpty.";
-      
-      assert(error.message.includes(errMsg))
+     try {
+      const playIx = getPlayInstruction(
+        {
+          piece: 2,
+          position: 0,
+          sos: sosKeypair.address,
+          signer: player2Keypair
+        }
+      )
+
+      await sendTransactionHelper([playIx], player2Keypair);
+    } catch (error: any) {
+      assert.equal(HELLO_ANCHOR_ERROR__POSITION_NOT_EMPTY, parseInt(error.cause.InstructionError[1].Custom))
     }
   });
  
   it("p1 score should increase after succesful SOS", async () => {
-    let sosAccount = await program.account.sos.fetch(
-      sosKeypair.publicKey
-    );
- 
-    await program.methods
-      .play(1, 2)
-      .accounts({
-        sos: sosKeypair.publicKey,
-        signer: player2Keypair.publicKey,
-      })
-      .signers([player2Keypair])
-      .rpc();
- 
-    const txHash = await program.methods
-      .play(2, 1)
-      .accounts({
-        sos: sosKeypair.publicKey,
-        signer: program.provider.publicKey,
-      })
-      .rpc();
+    let sosAccount = await fetchSos(client.rpc, sosKeypair.address)
+
+    assert.equal(sosAccount.data.p1Score, 0);
+
+    let playIx = getPlayInstruction(
+      {
+        piece: 2,
+        position: 1,
+        sos: sosKeypair.address,
+        signer: player2Keypair
+      }
+    )
+
+    await sendTransactionHelper([playIx], player2Keypair)
+
+    playIx = getPlayInstruction(
+      {
+        piece: 1,
+        position: 2,
+        sos: sosKeypair.address,
+        signer: client.wallet
+      }
+    )
+
+    await sendTransactionHelper([playIx], client.wallet)
     
-    await program.provider.connection.confirmTransaction(txHash);
- 
-    sosAccount = await program.account.sos.fetch(
-      sosKeypair.publicKey
-    );
-    
-    logBoard(sosAccount.board);
- 
-    assert.equal(sosAccount.p1Score, 1);
-    assert.equal(sosAccount.p2Score, 0);
-  });*/
-  it("Fails if the person trying to access a board is not part of that game");
+    sosAccount = await fetchSos(client.rpc, sosKeypair.address)
+
+    assert.equal(sosAccount.data.p1Score, 1);
+    assert.equal(sosAccount.data.p2Score, 0);
+  });
+  it("Fails if the person trying to access a board is not part of that game", async () => {
+    try {
+      const playIx = getPlayInstruction(
+        {
+          piece: 2,
+          position: 4,
+          sos: sosKeypair.address,
+          signer: player3Keypair
+        }
+      )
+
+      await sendTransactionHelper([playIx], player3Keypair);
+    } catch (error: any) {
+      assert.equal(HELLO_ANCHOR_ERROR__NOT_YOUR_TURN, parseInt(error.cause.InstructionError[1].Custom))
+    }
+  });
 });
