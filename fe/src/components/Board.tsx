@@ -1,6 +1,6 @@
 import { Program } from "@coral-xyz/anchor";
 import { Connection, PublicKey } from "@solana/web3.js";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import idl from "../idl.json";
 
 const S_SVG = () => (
@@ -19,13 +19,15 @@ const O_SVG = () => (
   </svg>
 );
 
-const Board = ({ setGame, game, publicKey, connection }: {connection: Connection}) => {
+const Board = (
+  { setGame, game, publicKey, connection }:
+    { setGame: any, game: any, publicKey: any, connection: Connection }
+) => {
   const convertTo2D = (arr, size) => {
     const result = [];
     for (let i = 0; i < arr.length; i += size) {
       result.push(arr.slice(i, i + size));
     }
-    console.log(result);
     return result;
   };
 
@@ -34,29 +36,32 @@ const Board = ({ setGame, game, publicKey, connection }: {connection: Connection
   const [board, setBoard] = useState(convertTo2D(game.board, 5));
   const [piece, setPiece] = useState(1);
 
+  useEffect(() => {
+    if(game) {
+      setBoard(convertTo2D(game.board, 5));
+    }
+  }, [game]);
+
   const handleClick = async (row, col) => {
-    if(isItMyTurn()) {
+    if (isItMyTurn()) {
       try {
         const position = row * 5 + col;
-        console.log("here")
         if (!publicKey) throw new Error("No publicKey");
-  
+
         const tx = await program.methods.play(position, piece).accounts({
           signer: publicKey,
           sos: game.pubkey
         })
           .rpc();
-        console.log("confirming")
         await connection.confirmTransaction(tx, 'confirmed');
-        console.log(tx);
         getCurrentGame();
-      } catch(err) {
+      } catch (err) {
         alert("Problem occured.");
       }
     }
   };
 
-  const getCurrentGame = async() => {
+  const getCurrentGame = async () => {
     let updatedGame = await program.account.sos.fetch(
       game.pubkey
     );
@@ -64,34 +69,34 @@ const Board = ({ setGame, game, publicKey, connection }: {connection: Connection
     setBoard(convertTo2D(updatedGame.board, 5));
   }
 
-  const amIPlaying = () : boolean => {
+  const amIPlaying = (): boolean => {
     return game.p1.toString() === publicKey.toString() || game.p2.toString() === publicKey.toString()
   }
 
   const isItMyTurn = (): boolean => {
     if (
-      amIPlaying() && 
-      (game.turn === 1 && game.p1.toString() === publicKey.toString()) || 
+      amIPlaying() &&
+      (game.turn === 1 && game.p1.toString() === publicKey.toString()) ||
       (game.turn === 2 && game.p2.toString() === publicKey.toString())
     )
       return true;
-    
+
     return false;
   }
 
   const headerString = () => {
-    if(amIPlaying()) {
+    if (amIPlaying()) {
       let opponentString = game.p1.toString() === publicKey.toString() ? game.p2.toString() : game.p1.toString();
       return "You" + " vs " + opponentString.substr(0, 4) + "...";
     }
-      
+
     else
       return game.p1.toString().substr(0, 4) + "..." + " vs " + game.p2.toString().substr(0, 4) + "...";
   }
 
   const turnString = () => {
-    let playerAddress = game.turn == 1 ? game.p1.toString() : game.p2.toString(); 
-    if(playerAddress === publicKey.toString())
+    let playerAddress = game.turn == 1 ? game.p1.toString() : game.p2.toString();
+    if (playerAddress === publicKey.toString())
       return "Your turn";
     else
       return playerAddress.substr(0, 4) + "...'s turn";
@@ -101,11 +106,11 @@ const Board = ({ setGame, game, publicKey, connection }: {connection: Connection
     <div className="mx-auto mt-10">
       <div className="text-xl font-bold my-4" onClick={() => getCurrentGame()}>{headerString()}</div>
       <div className="text-base italic my-4">{turnString()}</div>
-      {amIPlaying() && 
-      <div className="text-xl my-4">Choose:&nbsp;
-        <span className={`cursor-pointer font-bold text-lg ${piece == 1 ? "underline" : ""}`} onClick={() => setPiece(1)}>S</span>&nbsp;
-        <span className={`cursor-pointer font-bold text-lg ${piece == 2 ? "underline" : ""}`} onClick={() => setPiece(2)}>O</span>
-      </div>
+      {amIPlaying() &&
+        <div className="text-xl my-4">Choose:&nbsp;
+          <span className={`cursor-pointer font-bold text-lg ${piece == 1 ? "underline" : ""}`} onClick={() => setPiece(1)}>S</span>&nbsp;
+          <span className={`cursor-pointer font-bold text-lg ${piece == 2 ? "underline" : ""}`} onClick={() => setPiece(2)}>O</span>
+        </div>
       }
       <div className="grid grid-cols-5 gap-0 border border-gray-400">
         {board.map((row, rowIndex) =>
